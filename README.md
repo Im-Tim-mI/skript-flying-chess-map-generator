@@ -6,6 +6,18 @@ Paints a 21 × 21-tile Chinese aeroplane chess (Flying Chess) board in colored c
 
 > This repository has two editions of the same script: **繁體中文 (zh-TW)** is the original used on the author's Traditional Chinese server, and **English** is a full translation (commands, messages and variable names) with the same features.
 
+<!-- BEGIN LIVE SCREENSHOTS -->
+
+## Screenshots
+
+![Flying chess board generated on a live server](docs/images/flying-chess-map.png)
+
+*`/flyingchess 2` on a live Paper 26.2 server. Top-down view of the 42 x 42 board, drawn from the 1764 blocks the server reported back.*
+
+> These are live-server captures, not native client screenshots. A headless client logged into a real Paper 26.2 server, triggered the script, and the block / UI data the server sent back was re-rendered using the official Minecraft 26.2 client assets. Mojang/Microsoft image assets are not covered by this repository's code licence.
+
+<!-- END LIVE SCREENSHOTS -->
+
 ## Features
 
 - Adjustable tile size 1-8 (default 2, which makes a 42 × 42-block board)
