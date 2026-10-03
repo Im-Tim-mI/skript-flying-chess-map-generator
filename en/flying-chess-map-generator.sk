@@ -1,0 +1,166 @@
+# ------------------------------------------------------------
+#  skript-flying-chess-map-generator (English edition)
+#  https://github.com/Im-Tim-mI/skript-flying-chess-map-generator
+#  Copyright (c) 2026 廷廷小教室、廷廷的家（Tim945）
+#  License: MIT + Commons Clause (see LICENSE)
+# ------------------------------------------------------------
+
+# ============================================================
+#  Flying Chess Map Generator v2 (Chinese Aeroplane Chess)
+#  ----------------------------------------------------------
+#  Layout: 21x21 tiles
+#    - Four corner hangars (start areas): yellow/green/blue/red, each 2x2 tiles = 4x4 blocks
+#    - Outer track: a square loop 2 tiles wide, cycling through the four colors
+#    - Four start tiles: red (top), yellow (bottom), green (left), blue (right)
+#    - Four home lanes leading into the central finish area
+#    - Everything else is white, so the whole board is a walkable square floor
+#
+#  Default tile size is 2 (= 2x2 blocks per tile, 4x4 hangars).
+#  Only places blocks and doesn't change any game mechanics.
+#
+#  Install: put it at plugins/Skript/scripts/flying-chess-map-generator.sk
+#           then run  /sk reload flying-chess-map-generator
+#  Usage:   /flyingchess        (default: 2x2 blocks per tile)
+#           /flyingchess 3      (3x3 blocks per tile, bigger)
+#  The board uses your position as its north-west corner and is laid on the layer under your feet (y-1).
+# ============================================================
+
+
+# ------------------------------------------------------------
+#  Return the block for a board cell (row 0~20, col 0~20)
+# ------------------------------------------------------------
+function fcBlock(r: number, c: number) :: itemtype:
+    # 1) Four corner hangars (2x2 tiles each)
+    if {_r} is between 0 and 1:
+        if {_c} is between 0 and 1:
+            return yellow concrete
+        if {_c} is between 19 and 20:
+            return green concrete
+    if {_r} is between 19 and 20:
+        if {_c} is between 0 and 1:
+            return blue concrete
+        if {_c} is between 19 and 20:
+            return red concrete
+
+    # 2) Central 3x3 finish area (the four entrances are colored)
+    if {_r} is between 9 and 11:
+        if {_c} is between 9 and 11:
+            if {_r} is 9:
+                if {_c} is 10:
+                    return red concrete
+            if {_r} is 11:
+                if {_c} is 10:
+                    return yellow concrete
+            if {_r} is 10:
+                if {_c} is 9:
+                    return green concrete
+                if {_c} is 11:
+                    return blue concrete
+            return white concrete
+
+    # 3) Vertical arm: red home lane on top / yellow home lane at the bottom
+    if {_c} is between 9 and 11:
+        if {_r} is between 5 and 15:
+            if {_c} is 10:
+                if {_r} is between 5 and 9:
+                    return red concrete
+                if {_r} is between 11 and 15:
+                    return yellow concrete
+            return white concrete
+
+    # 4) Horizontal arm: green home lane on the left / blue home lane on the right
+    if {_r} is between 9 and 11:
+        if {_c} is between 5 and 15:
+            if {_r} is 10:
+                if {_c} is between 5 and 9:
+                    return green concrete
+                if {_c} is between 11 and 15:
+                    return blue concrete
+            return white concrete
+
+    # 5) Outer track (a square loop 2 tiles wide)
+    set {_onRing} to false
+    if {_r} is between 3 and 4:
+        if {_c} is between 3 and 17:
+            set {_onRing} to true
+    if {_r} is between 16 and 17:
+        if {_c} is between 3 and 17:
+            set {_onRing} to true
+    if {_c} is between 3 and 4:
+        if {_r} is between 3 and 17:
+            set {_onRing} to true
+    if {_c} is between 16 and 17:
+        if {_r} is between 3 and 17:
+            set {_onRing} to true
+    if {_onRing} is true:
+        # Start tile of each color
+        if {_c} is 10:
+            if {_r} is between 3 and 4:
+                return red concrete
+            if {_r} is between 16 and 17:
+                return yellow concrete
+        if {_r} is 10:
+            if {_c} is between 3 and 4:
+                return green concrete
+            if {_c} is between 16 and 17:
+                return blue concrete
+        # The rest of the track cycles through the four colors
+        set {_s} to {_r} + {_c}
+        set {_m} to {_s} - 4 * floor({_s} / 4)
+        if {_m} is 0:
+            return red concrete
+        if {_m} is 1:
+            return green concrete
+        if {_m} is 2:
+            return yellow concrete
+        return blue concrete
+
+    # 6) Everything else = white floor
+    return white concrete
+
+
+# ------------------------------------------------------------
+#  Command: /flyingchess [tile size]
+# ------------------------------------------------------------
+command /flyingchess [<integer>]:
+    description: Generate a Chinese aeroplane chess map at your position
+    executable by: players
+    trigger:
+        # Tile size (1~8), default 2 -> 2x2 blocks per tile, 4x4 hangars
+        set {_size} to arg-1
+        if {_size} is not set:
+            set {_size} to 2
+        if {_size} is smaller than 1:
+            set {_size} to 1
+        if {_size} is larger than 8:
+            set {_size} to 8
+
+        # Your position is the north-west corner; the board goes on the layer under your feet
+        set {_base} to location of player
+        set {_world} to world of player
+        set {_bx} to floor(x-coordinate of {_base})
+        set {_by} to (floor(y-coordinate of {_base})) - 1
+        set {_bz} to floor(z-coordinate of {_base})
+
+        set {_count} to 0
+        send "&a[Flying Chess] Generating the map (%{_size}%x%{_size}% blocks per tile)..." to player
+
+        loop integers from 0 to 20:
+            set {_r} to loop-value-1
+            loop integers from 0 to 20:
+                set {_c} to loop-value-2
+                set {_block} to fcBlock({_r}, {_c})
+                loop integers from 0 to ({_size} - 1):
+                    set {_i} to loop-value-3
+                    loop integers from 0 to ({_size} - 1):
+                        set {_j} to loop-value-4
+                        set {_dx} to {_c} * {_size} + {_i}
+                        set {_dz} to {_r} * {_size} + {_j}
+                        set {_loc} to location({_bx} + {_dx}, {_by}, {_bz} + {_dz}, {_world})
+                        set block at {_loc} to {_block}
+                        add 1 to {_count}
+            # Wait one tick after each row to avoid a lag spike
+            wait 1 tick
+
+        set {_edge} to 21 * {_size}
+        send "&a[Flying Chess] Done! Placed %{_count}% blocks; the map is about %{_edge}%x%{_edge}% blocks." to player
